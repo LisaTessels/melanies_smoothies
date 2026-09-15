@@ -16,11 +16,13 @@ p_key = serialization.load_pem_private_key(
     private_key_bytes,
     password=None
 )
-pkb = p_key.private_key_bytes(
+
+pkb = p_key.private_bytes(
     encoding=serialization.Encoding.DER,
     format=serialization.PrivateFormat.PKCS8,
     encryption_algorithm=serialization.NoEncryption()
 )
+
 
 # Geef de geconverteerde 'private_key' direct mee aan st.connection
 cnx = st.connection("snowflake", private_key=pkb)
