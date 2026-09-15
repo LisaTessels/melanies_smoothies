@@ -2,6 +2,29 @@
 import streamlit as st
 from snowflake.snowpark.functions import col
 import os
+import requests  
+# Voeg deze extra imports toe voor de sleutel-conversie:
+from cryptography.hazmat.primitives import serialization
+
+# --- SLEUTEL CONVERSIE VOOR SLEUTELPAAR AUTHENTICATIE ---
+# Haal de tekstversie van de sleutel op uit de Streamlit Cloud Secrets (instellingen)
+private_key_text = st.secrets["connections"]["snowflake"]["private_key_raw"]
+private_key_bytes = private_key_text.encode('utf-8')
+
+# Zet de tekst om naar de vereiste cryptografische bytes voor de driver
+p_key = serialization.load_pem_private_key(
+    private_key_bytes,
+    password=None
+)
+pkb = p_key.private_key_bytes(
+    encoding=serialization.Encoding.DER,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption()
+)
+
+# Geef de geconverteerde 'private_key' direct mee aan st.connection
+cnx = st.connection("snowflake", private_key=pkb)
+# --------------------------------------------------------
 
 # Write directly to the app
 st.title(f":cup_with_straw:  Customize Your Smoothie :cup_with_straw:")
@@ -13,7 +36,6 @@ st.write(
 name_on_order = st.text_input('Name on Smoothie:')
 st.write('The name on your Smoothie will be:', name_on_order)
 
-cnx = st.connection("snowflake")
 session = cnx.session()
 my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
 #st.dataframe(data=my_dataframe, use_container_width=True)
@@ -43,8 +65,6 @@ if ingredients_list:
         session.sql(my_insert_stmt).collect()
         st.success('Your Smoothie is ordered!', icon="✅")
 
-
-import requests  
-smoothiefroot_response = requests.get("[https://my.smoothiefroot.com/api/fruit/watermelon](https://my.smoothiefroot.com/api/fruit/watermelon)")  
+smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")  
 #st.text(smoothiefroot_response.json())
 sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
